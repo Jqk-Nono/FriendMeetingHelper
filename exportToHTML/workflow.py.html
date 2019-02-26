@@ -1,0 +1,108 @@
+<html>
+<head>
+<title>workflow.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.ln { color: #999999; font-weight: normal; font-style: normal; }
+.s0 { color: rgb(128,128,128); font-style: italic; }
+.s1 { color: rgb(0,0,0); }
+.s2 { color: rgb(0,0,128); font-weight: bold; }
+.s3 { color: rgb(0,128,0); font-weight: bold; }
+.s4 { color: rgb(0,0,255); }
+</style>
+</head>
+<BODY BGCOLOR="#ffffff">
+<TABLE CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#c0c0c0" >
+<TR><TD><CENTER>
+<FONT FACE="Arial, Helvetica" COLOR="#000000">
+workflow.py</FONT>
+</center></TD></TR></TABLE>
+<pre>
+<span class="s0"># -*- coding: utf-8 -*-</span><span class="s1"> 
+ 
+</span><span class="s2">import </span><span class="s1">codecs 
+</span><span class="s2">import </span><span class="s1">os 
+</span><span class="s2">import </span><span class="s1">group 
+</span><span class="s2">import </span><span class="s1">meeting 
+</span><span class="s2">import </span><span class="s1">user 
+</span><span class="s2">import </span><span class="s1">xml.etree.cElementTree </span><span class="s2">as </span><span class="s1">ET 
+</span><span class="s2">from </span><span class="s1">session </span><span class="s2">import </span><span class="s1">Session 
+ 
+</span><span class="s2">from </span><span class="s1">xml.etree.ElementTree </span><span class="s2">import </span><span class="s1">Element, SubElement, tostring 
+ 
+app_folder=</span><span class="s3">&quot;/root/appdata/&quot;</span><span class="s1"> 
+group_data_folder=app_folder+</span><span class="s3">&quot;group_data/&quot;</span><span class="s1"> 
+user_data_folder=app_folder+</span><span class="s3">&quot;user_data/&quot;</span><span class="s1"> 
+ 
+help_dict={</span><span class="s3">&quot;help&quot;</span><span class="s1">:</span><span class="s3">&quot;显示帮助文档。&quot;</span><span class="s1">, 
+           </span><span class="s3">&quot;setname&quot;</span><span class="s1">:</span><span class="s3">&quot;设置nickname。eg. setname 不愿意透露姓名的王富贵先生&quot;</span><span class="s1">, 
+           </span><span class="s3">&quot;creategroup&quot;</span><span class="s1">:</span><span class="s3">&quot;创建群。eg. creategroup 狗群&quot;</span><span class="s1">, 
+           </span><span class="s3">&quot;createmeeting&quot;</span><span class="s1">:</span><span class="s3">&quot;创建聚会。eg. createmeeting 一起吃狗粮&quot;</span><span class="s1">, 
+           </span><span class="s3">&quot;entergroup&quot;</span><span class="s1">:</span><span class="s3">&quot;进如群看看。eg. entergroup 狗群&quot;</span><span class="s1">, 
+           </span><span class="s3">&quot;entermeeting&quot;</span><span class="s1">:</span><span class="s3">&quot;进入聚会看看。eg. entermeeting 一起吃狗粮&quot;</span><span class="s1">, 
+           </span><span class="s3">&quot;joingroup&quot;</span><span class="s1">:</span><span class="s3">&quot;加入群。eg. joingroup 狗群&quot;</span><span class="s1">, 
+           </span><span class="s3">&quot;joinmeeting&quot;</span><span class="s1">:</span><span class="s3">&quot;加入聚会。eg. joinmeeting 一起吃狗粮&quot;</span><span class="s1">, 
+           </span><span class="s3">&quot;showattendusers&quot;</span><span class="s1">:</span><span class="s3">&quot;在一个聚会中查看参加的人。eg. showattendusers 一起吃狗粮&quot;</span><span class="s1">, 
+           </span><span class="s3">&quot;showallmeetings [groupname]&quot;</span><span class="s1">:</span><span class="s3">&quot;显示当前定位的群里的聚会。&quot;</span><span class="s1">, 
+           </span><span class="s3">&quot;follow [nickname]&quot;</span><span class="s1">:</span><span class="s3">&quot;跟随另一条人，它参加啥就跟着参加。&quot;</span><span class="s1">} 
+ 
+</span><span class="s2">def </span><span class="s1">help(): 
+    help_doc=</span><span class="s3">''</span><span class="s1"> 
+    </span><span class="s2">for </span><span class="s1">command </span><span class="s2">in </span><span class="s1">sorted(help_dict): 
+        help_doc += command + </span><span class="s3">&quot;:&quot; </span><span class="s1">+ help_dict[command] + </span><span class="s3">&quot;</span><span class="s2">\r\n\r\n</span><span class="s3">&quot;</span><span class="s1"> 
+    </span><span class="s2">return </span><span class="s1">help_doc 
+ 
+</span><span class="s2">def </span><span class="s1">undone(): 
+    </span><span class="s2">return </span><span class="s3">&quot;还没做，吃饱了再写。&quot;</span><span class="s1"> 
+ 
+</span><span class="s2">def </span><span class="s1">make_response(request): 
+    session=request.user.current_session() 
+    command=request.content 
+    parameter=</span><span class="s3">''</span><span class="s1"> 
+    </span><span class="s2">if </span><span class="s3">' ' </span><span class="s2">in </span><span class="s1">request.content: 
+        command=request.content.split(</span><span class="s3">' '</span><span class="s1">,</span><span class="s4">1</span><span class="s1">)[</span><span class="s4">0</span><span class="s1">] 
+        parameter=request.content.split(</span><span class="s3">' '</span><span class="s1">,</span><span class="s4">1</span><span class="s1">)[</span><span class="s4">1</span><span class="s1">] 
+ 
+    </span><span class="s2">if </span><span class="s1">command == </span><span class="s3">&quot;help&quot;</span><span class="s1">: 
+        </span><span class="s2">return </span><span class="s1">help() 
+ 
+    </span><span class="s2">if </span><span class="s1">parameter </span><span class="s2">is not </span><span class="s3">''</span><span class="s1">: 
+        </span><span class="s2">if </span><span class="s1">command==</span><span class="s3">&quot;setname&quot;</span><span class="s1">: 
+            </span><span class="s2">return </span><span class="s1">request.user.setname(parameter) 
+ 
+        </span><span class="s2">if </span><span class="s1">command==</span><span class="s3">&quot;creategroup&quot;</span><span class="s1">: 
+            </span><span class="s2">return </span><span class="s1">request.user.creategroup(parameter) 
+ 
+        </span><span class="s2">if </span><span class="s1">command == </span><span class="s3">&quot;createmeeting&quot;</span><span class="s1">: 
+            </span><span class="s2">return </span><span class="s1">request.user.createmeeting(parameter) 
+ 
+        </span><span class="s2">if </span><span class="s1">command==</span><span class="s3">&quot;entergroup&quot;</span><span class="s1">: 
+            </span><span class="s2">return </span><span class="s1">request.user.entergroup(parameter) 
+ 
+        </span><span class="s2">if </span><span class="s1">command==</span><span class="s3">&quot;entermeeting&quot;</span><span class="s1">: 
+            </span><span class="s2">return </span><span class="s1">request.user.entermeeting(parameter) 
+ 
+        </span><span class="s2">if </span><span class="s1">command==</span><span class="s3">&quot;joingroup&quot;</span><span class="s1">: 
+            </span><span class="s2">return </span><span class="s1">request.user.joingroup(parameter) 
+ 
+        </span><span class="s2">if </span><span class="s1">command==</span><span class="s3">&quot;joinmeeting&quot;</span><span class="s1">: 
+            </span><span class="s2">return </span><span class="s1">request.user.joinmeeting(parameter) 
+ 
+        </span><span class="s2">if </span><span class="s1">command==</span><span class="s3">&quot;showattendusers&quot;</span><span class="s1">: 
+            </span><span class="s2">return </span><span class="s1">request.user.showattendusers(parameter) 
+ 
+        </span><span class="s2">if </span><span class="s1">command==</span><span class="s3">&quot;showallmeetings&quot;</span><span class="s1">: 
+            </span><span class="s2">return </span><span class="s1">request.user.showallmeetings(parameter) 
+ 
+        </span><span class="s2">if </span><span class="s1">command==</span><span class="s3">&quot;follow&quot;</span><span class="s1">: 
+            </span><span class="s2">return </span><span class="s1">undone() 
+    </span><span class="s2">else</span><span class="s1">: 
+        </span><span class="s2">if </span><span class="s1">command==</span><span class="s3">&quot;showallmeetings&quot;</span><span class="s1">: 
+            </span><span class="s2">return </span><span class="s1">request.user.showallmeetings() 
+ 
+        </span><span class="s2">if</span><span class="s1">(session.current_process==</span><span class="s3">'createmeeting'</span><span class="s1">): 
+            </span><span class="s2">return </span><span class="s1">request.user.createmeeting(command) 
+ 
+    </span><span class="s2">return </span><span class="s1">help()</span></pre>
+</body>
+</html>
