@@ -1,0 +1,7 @@
+venv/*
+.idea/*
+venv1.zip
+.idea/FriendMeetingHelper.iml
+.idea/misc.xml
+.idea/modules.xml
+*.pyc
