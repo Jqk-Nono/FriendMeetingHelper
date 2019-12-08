@@ -3,7 +3,7 @@
 import sys
 
 reload(sys)
-# sys.setdefaultencoding('utf8')
+sys.setdefaultencoding('utf8')
 
 app_folder = "/root/appdata/"
 group_data_folder = app_folder + "group_data/"
